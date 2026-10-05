@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Graficador 3D de Rectas y Funciones Paramétricas</title>
+  <!-- Cargamos Plotly.js para gráficos 3D interactivos -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <!-- mathjs para evaluar expresiones matemáticas libremente -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      background-color: #f4f6f9;
+    }
+    #sidebar {
+      width: 340px;
+      padding: 20px;
+      background: #ffffff;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      overflow-y: auto;
+      z-index: 10;
+    }
+    #graph-container {
+      flex: 1;
+      height: 100vh;
+    }
+    h2 { margin-top: 0; color: #2c3e50; font-size: 1.3rem; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #34495e; }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .row { display: flex; gap: 10px; }
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+    button:hover { background-color: #2980b9; }
+    button.secondary { background-color: #2ecc71; }
+    button.secondary:hover { background-color: #27ae60; }
+    .info-box {
+      background: #eef7fc;
+      border-left: 4px solid #3498db;
+      padding: 10px;
+      font-size: 0.85rem;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <h2>Graficador 3D</h2>
+    
+    <button class="secondary" onclick="cargarProblemaImagen()">Cargar problema de la Imagen</button>
+    <hr>
+
+    <div class="input-group">
+      <label>Ecuaciones Paramétricas [ $x(t), y(t), z(t)$ ]:</label>
+      <input type="text" id="eqX" placeholder="Ej: t" value="t">
+      <input type="text" id="eqY" placeholder="Ej: 1 - t" value="1 - t" style="margin-top:5px;">
+      <input type="text" id="eqZ" placeholder="Ej: 2 + 2*t" value="2 + 2*t" style="margin-top:5px;">
+    </div>
+
+    <div class="input-group">
+      <label>Rango del parámetro $t$:</label>
+      <div class="row">
+        <input type="number" id="tMin" value="-5" step="0.5">
+        <input type="number" id="tMax" value="5" step="0.5">
+      </div>
+    </div>
+
+    <button onclick="graficarFuncion()">Graficar Función / Recta</button>
+
+    <div class="info-box">
+      <strong>Instrucciones de Rotación/Zoom:</strong>
+      <ul>
+        <li><strong>Rotar:</strong> Haz clic izquierdo dentro de la gráfica y arrastra el ratón.</li>
+        <li><strong>Zoom:</strong> Usa la rueda del ratón o haz pellizco en pantallas táctiles.</li>
+        <li><strong>Trasladar:</strong> Haz clic derecho y arrastra.</li>
+      </ul>
+      <strong>Ejemplos de funciones:</strong>
+      <ul>
+        <li><strong>Hélice:</strong> $x = \cos(t)$, $y = \sin(t)$, $z = t$</li>
+        <li><strong>Curva 3D:</strong> $x = t$, $y = t^2$, $z = t^3$</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="graph-container"></div>
+
+  <script>
+    function graficarFuncion() {
+      const eqXStr = document.getElementById('eqX').value;
+      const eqYStr = document.getElementById('eqY').value;
+      const eqZStr = document.getElementById('eqZ').value;
+      
+      const tMin = parseFloat(document.getElementById('tMin').value);
+      const tMax = parseFloat(document.getElementById('tMax').value);
+
+      const numPuntos = 500;
+      const step = (tMax - tMin) / numPuntos;
+
+      const xVals = [];
+      const yVals = [];
+      const zVals = [];
+
+      try {
+        const exprX = math.compile(eqXStr);
+        const exprY = math.compile(eqYStr);
+        const exprZ = math.compile(eqZStr);
+
+        for (let i = 0; i <= numPuntos; i++) {
+          const t = tMin + i * step;
+          const scope = { t: t };
+          xVals.push(exprX.evaluate(scope));
+          yVals.push(exprY.evaluate(scope));
+          zVals.push(exprZ.evaluate(scope));
+        }
+
+        const data = [{
+          type: 'scatter3d',
+          mode: 'lines',
+          x: xVals,
+          y: yVals,
+          z: zVals,
+          line: {
+            width: 6,
+            color: zVals,
+            colorscale: 'Viridis'
+          },
+          name: 'Función R(t)'
+        }];
+
+        const layout = {
+          margin: { l: 0, r: 0, b: 0, t: 0 },
+          scene: {
+            xaxis: { title: 'Eje X' },
+            yaxis: { title: 'Eje Y' },
+            zaxis: { title: 'Eje Z' },
+            camera: {
+              eye: { x: 1.5, y: 1.5, z: 1.5 }
+            }
+          }
+        };
+
+        Plotly.newPlot('graph-container', data, layout, {responsive: true});
+
+      } catch (error) {
+        alert("Error al evaluar las funciones. Asegúrate de usar la variable 't' y sintaxis válida (ej. cos(t), sin(t), t^2, 2*t).");
+      }
+    }
+
+    function cargarProblemaImagen() {
+      // Cargar la recta solución del problema
+      document.getElementById('eqX').value = "t";
+      document.getElementById('eqY').value = "1 - t";
+      document.getElementById('eqZ').value = "2 + 2*t";
+      document.getElementById('tMin').value = "-5";
+      document.getElementById('tMax').value = "5";
+      
+      // Graficar recta original y recta paralela juntas
+      const tMin = -5, tMax = 5, numPuntos = 200;
+      const step = (tMax - tMin) / numPuntos;
+
+      const x1 = [], y1 = [], z1 = []; // Recta dada
+      const x2 = [], y2 = [], z2 = []; // Recta solución
+
+      for (let i = 0; i <= numPuntos; i++) {
+        const t = tMin + i * step;
+        // Recta dada: x = 1+t, y = 1-t, z = 2t
+        x1.push(1 + t);
+        y1.push(1 - t);
+        z1.push(2 * t);
+
+        // Recta buscada: x = t, y = 1-t, z = 2+2t
+        x2.push(t);
+        y2.push(1 - t);
+        z2.push(2 + 2 * t);
+      }
+
+      const trace1 = {
+        type: 'scatter3d',
+        mode: 'lines',
+        x: x1, y: y1, z: z1,
+        line: { width: 4, color: 'red' },
+        name: 'Recta Dada: (1+t, 1-t, 2t)'
+      };
+
+      const trace2 = {
+        type: 'scatter3d',
+        mode: 'lines',
+        x: x2, y: y2, z: z2,
+        line: { width: 6, color: 'blue' },
+        name: 'Recta Solución: (t, 1-t, 2+2t)'
+      };
+
+      const puntoP = {
+        type: 'scatter3d',
+        mode: 'markers',
+        x: [0], y: [1], z: [2],
+        marker: { size: 6, color: 'green' },
+        name: 'Punto P(0,1,2)'
+      };
+
+      const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        scene: {
+          xaxis: { title: 'X' },
+          yaxis: { title: 'Y' },
+          zaxis: { title: 'Z' }
+        }
+      };
+
+      Plotly.newPlot('graph-container', [trace1, trace2, puntoP], layout, {responsive: true});
+    }
+
+    // Graficar función inicial al cargar la página
+    window.onload = graficarFuncion;
+  </script>
+</body>
+</html>
